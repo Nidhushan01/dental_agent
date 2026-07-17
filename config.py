@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "sqlite:///./dental.db"
+    DATABASE_URL: str = "sqlite:////tmp/dental.db"
     
     # OpenRouter (Hermes)
     OPENROUTER_API_KEY: str = ""

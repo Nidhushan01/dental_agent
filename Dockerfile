@@ -78,9 +78,9 @@ COPY --chown=appuser:appuser . .
 RUN mkdir -p /app/data /app/tmp \
     && chown -R appuser:appuser /app/data /app/tmp
 
-# Point the app to the writable data directory.
-# This default is overridden by the DATABASE_URL env var on Render.
-ENV DATABASE_URL="sqlite:////app/data/dental.db"
+# Use /tmp for SQLite — always writable by any user in any container.
+# Override DATABASE_URL env var on Render if you want a different path.
+ENV DATABASE_URL="sqlite:////tmp/dental.db"
 
 # Switch to non-root user
 USER appuser

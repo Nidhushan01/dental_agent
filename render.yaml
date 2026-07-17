@@ -18,4 +18,4 @@ services:
       - key: TTS_LANGUAGE
         value: en
       - key: DATABASE_URL
-        value: sqlite:////app/data/dental.db
+        value: sqlite:////tmp/dental.db
