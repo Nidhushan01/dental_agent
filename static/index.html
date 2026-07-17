@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dental Web Agent - Appointments &amp; FAQ</title>
+    <meta name="description" content="Book dental appointments or get dental advice using voice or text with the Dental Web Agent." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>&#x1F9B7; Dental Web Agent</h1>
+            <p>Book appointments or get dental advice using voice or text</p>
+        </div>
+
+        <div class="widget">
+            <!-- Flow Selector -->
+            <div class="flow-selector">
+                <button id="flow-appointments" class="flow-btn active" data-flow="appointments">
+                    &#x1F4C5; Appointments
+                </button>
+                <button id="flow-faq" class="flow-btn" data-flow="faq">
+                    &#x2753; Ask a Question
+                </button>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- Appointments Section                                          -->
+            <!-- ============================================================ -->
+            <div id="appointments-section" class="appointments-section">
+
+                <!-- BOOK APPOINTMENT accordion -->
+                <div class="accordion" id="acc-book">
+                    <button class="accordion-header" data-target="panel-book" aria-expanded="false">
+                        <span class="acc-icon">&#x1F4CB;</span>
+                        <span class="acc-title">Book an Appointment</span>
+                        <span class="acc-chevron">&#x203A;</span>
+                    </button>
+                    <div class="accordion-panel" id="panel-book">
+                        <div class="appt-row">
+                            <label for="appt-name">Name</label>
+                            <input type="text" id="appt-name" placeholder="Full name" autocomplete="name" />
+                        </div>
+                        <div class="appt-row two-col">
+                            <div class="field-group">
+                                <label for="appt-date">Date</label>
+                                <input type="date" id="appt-date" />
+                            </div>
+                            <div class="field-group">
+                                <label for="appt-time">Time</label>
+                                <input type="time" id="appt-time" />
+                            </div>
+                        </div>
+                        <div class="appt-row">
+                            <label for="appt-service">Service</label>
+                            <input type="text" id="appt-service" placeholder="e.g., cleaning, whitening" />
+                        </div>
+                        <div class="appt-actions">
+                            <button id="check-availability" class="btn btn-outline">
+                                &#x1F50D; Check Availability
+                            </button>
+                            <button id="book-appointment" class="btn btn-primary">
+                                &#x2705; Book Appointment
+                            </button>
+                        </div>
+                        <div id="book-result" class="result-panel" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <!-- SCHEDULED APPOINTMENTS accordion -->
+                <div class="accordion" id="acc-view">
+                    <button class="accordion-header" data-target="panel-view" aria-expanded="false">
+                        <span class="acc-icon">&#x1F4C6;</span>
+                        <span class="acc-title">View Scheduled Appointments</span>
+                        <span class="acc-chevron">&#x203A;</span>
+                    </button>
+                    <div class="accordion-panel" id="panel-view">
+                        <div class="appt-actions">
+                            <button id="show-scheduled-appointments" class="btn btn-outline full-width">
+                                &#x1F504; Load Appointments
+                            </button>
+                        </div>
+                        <div id="view-result" class="result-panel" style="display:none;"></div>
+                        <div id="scheduled-appointments-list" class="scheduled-appointments-list"></div>
+                    </div>
+                </div>
+
+                <!-- MODIFY / CANCEL accordion -->
+                <div class="accordion" id="acc-modify">
+                    <button class="accordion-header" data-target="panel-modify" aria-expanded="false">
+                        <span class="acc-icon">&#x270F;&#xFE0F;</span>
+                        <span class="acc-title">Reschedule or Cancel</span>
+                        <span class="acc-chevron">&#x203A;</span>
+                    </button>
+                    <div class="accordion-panel" id="panel-modify">
+                        <div class="appt-row">
+                            <label for="appt-id">Appointment ID</label>
+                            <input type="number" id="appt-id" placeholder="e.g., 42" min="1" />
+                        </div>
+                        <div class="appt-row two-col">
+                            <div class="field-group">
+                                <label for="appt-new-date">New Date</label>
+                                <input type="date" id="appt-new-date" />
+                            </div>
+                            <div class="field-group">
+                                <label for="appt-new-time">New Time</label>
+                                <input type="time" id="appt-new-time" />
+                            </div>
+                        </div>
+                        <div class="appt-actions">
+                            <button id="reschedule-appointment" class="btn btn-outline">
+                                &#x1F5D3;&#xFE0F; Reschedule
+                            </button>
+                            <button id="cancel-appointment" class="btn btn-danger">
+                                &#x2715; Cancel Appointment
+                            </button>
+                        </div>
+                        <div id="modify-result" class="result-panel" style="display:none;"></div>
+                    </div>
+                </div>
+
+            </div><!-- /appointments-section -->
+
+            <!-- ============================================================ -->
+            <!-- Chat Section (Ask a Question) - voice/recording lives here   -->
+            <!-- ============================================================ -->
+            <div id="chat-section" class="chat-section" style="display:none;">
+                <div id="messages" class="messages">
+                    <div class="message bot">
+                        <p>Welcome! Ask me a dental question or describe what you need.</p>
+                    </div>
+                </div>
+
+                <!-- Controls: text input + voice recording -->
+                <div class="controls" id="chat-controls">
+                    <div class="input-group">
+                        <input
+                            type="text"
+                            id="text-input"
+                            placeholder="Type your dental question here..."
+                            autocomplete="off"
+                        />
+                        <button id="send-btn" class="btn-primary">Send</button>
+                    </div>
+
+                    <!-- Voice Controls: ONLY in Ask a Question tab -->
+                    <div class="voice-controls" id="voice-controls">
+                        <button id="mic-btn" class="btn-voice" title="Click to record voice message">
+                            &#x1F3A4; Record
+                        </button>
+                        <span id="mic-status"></span>
+                    </div>
+
+                    <!-- Audio Player: ONLY in Ask a Question tab -->
+                    <div id="audio-player" class="audio-player" style="display: none;">
+                        <audio id="response-audio" controls>
+                            <source type="audio/mpeg" />
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                </div>
+            </div><!-- /chat-section -->
+
+        </div><!-- /widget -->
+
+        <div class="footer">
+            <p>
+                For emergencies, call <strong>(555) 123-4567</strong> immediately.
+            </p>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

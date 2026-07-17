@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+gtts
+pydantic
+pydantic-settings
+python-multipart
+openai
+requests
+python-dotenv
+openai-whisper
+pydub
+jinja2
+httpx

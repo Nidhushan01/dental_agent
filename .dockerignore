@@ -1,0 +1,46 @@
+# ── Python cache ──────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Virtual environment ────────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── Database file (mount as a volume instead) ─────────────────────────────────
+dental.db
+
+# ── Environment secrets ────────────────────────────────────────────────────────
+.env
+.env.*
+
+# ── Generated audio replies ────────────────────────────────────────────────────
+static/reply_*.mp3
+
+# ── Test files ─────────────────────────────────────────────────────────────────
+test*.py
+tests/
+
+# ── Editor / OS artefacts ──────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# ── Git ────────────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# ── Docs / CI ─────────────────────────────────────────────────────────────────
+*.md
+Procfile
+BUILD_SUMMARY.txt
+DEPLOYMENT.md

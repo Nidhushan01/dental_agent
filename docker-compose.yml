@@ -1,0 +1,54 @@
+# =============================================================================
+# Dental Web Agent — docker-compose.yml
+# =============================================================================
+# Usage:
+#   docker compose up --build          # build + run
+#   docker compose up -d               # detached mode
+#   docker compose down                # stop & remove containers
+# =============================================================================
+
+services:
+  dental-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dental-web-agent
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    # Use public DNS — fixes "[Errno -3] Temporary failure in name resolution"
+    # that occurs in Docker Desktop on Windows with the default internal resolver
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+    # ── Environment variables ─────────────────────────────────────────────────
+    # Secrets come from .env on the host — never baked into the image
+    env_file:
+      - .env
+    environment:
+      # Override DATABASE_URL to use the persistent volume path
+      DATABASE_URL: sqlite:////app/data/dental.db
+
+    # ── Volumes ───────────────────────────────────────────────────────────────
+    volumes:
+      # Persist SQLite database across container restarts
+      - dental_db:/app/data
+      # Persist generated TTS audio files
+      - dental_audio:/app/static
+
+    # ── Health check (mirrors Dockerfile HEALTHCHECK) ─────────────────────────
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+# ── Named volumes ─────────────────────────────────────────────────────────────
+volumes:
+  dental_db:
+    driver: local
+  dental_audio:
+    driver: local

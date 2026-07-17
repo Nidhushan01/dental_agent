@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: dental-web-agent
+    runtime: docker
+    plan: free           # Change to 'starter' for always-on (no sleep)
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      # Set OPENROUTER_API_KEY in the Render dashboard — never commit secrets
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: gpt-4o-mini
+      - key: HERMES_MODEL
+        value: NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO
+      - key: STT_MODEL
+        value: base
+      - key: TTS_LANGUAGE
+        value: en
+      - key: DATABASE_URL
+        value: sqlite:///./dental.db

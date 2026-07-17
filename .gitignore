@@ -1,0 +1,32 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Environment secrets — NEVER commit this
+.env
+
+# Database (SQLite is ephemeral on Render anyway)
+*.db
+*.sqlite
+
+# Audio temp files
+*.mp3
+*.wav
+*.webm
+*.ogg
+
+# IDE
+.vscode/
+.idea/
+
+# Render secrets (render.yaml is safe — no secrets in it)
+# Never commit any file containing actual API keys
