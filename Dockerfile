@@ -89,8 +89,11 @@ USER appuser
 EXPOSE 8000
 
 # Health-check — uses the /health endpoint defined in main.py
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+# start-period=60s: give the app time to load the Whisper model before
+# health-checks begin firing (model load can take 30-60 s on cold start).
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+    CMD python -c "import os,urllib.request; urllib.request.urlopen('http://localhost:' + os.environ.get('PORT','10000') + '/health')" || exit 1
 
-# Launch uvicorn — use Render's injected PORT env var (falls back to 8000 locally)
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
+# Launch uvicorn — use Render's injected PORT env var (falls back to 10000 locally)
+# --timeout-keep-alive 75: keeps connections alive longer than Render's 60-s idle timeout
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000} --workers 1 --timeout-keep-alive 75"]

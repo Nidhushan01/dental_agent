@@ -300,37 +300,52 @@ async function handleCancel() {
 // ===========================================================================
 
 async function checkMicrophoneSupport() {
+    // Only available on https:// or http://localhost (browser secure-context rule)
+    const isSecureContext = window.isSecureContext;
     const hasMediaDevices = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-    if (!hasMediaDevices) {
+
+    if (!isSecureContext || !hasMediaDevices) {
         micBtn.disabled = true;
-        micBtn.title = 'Microphone not supported in your browser';
+        micBtn.title = isSecureContext
+            ? 'Microphone not supported in your browser'
+            : 'Microphone requires a secure (HTTPS) connection';
+        if (micStatus) micStatus.textContent = '🔒 Mic requires HTTPS';
         return;
     }
+
     try {
+        // Keep the stream alive — pass it straight to the recorder (no double getUserMedia)
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => track.stop());
-        setupMediaRecorder();
+        setupMediaRecorder(stream);
     } catch (error) {
-        console.warn('Microphone permission denied:', error);
+        console.warn('Microphone permission denied or unavailable:', error);
         micBtn.disabled = true;
         micBtn.title = 'Microphone permission denied';
+        if (micStatus) micStatus.textContent = '🚫 Mic permission denied';
     }
 }
 
-function setupMediaRecorder() {
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = (event) => {
-                recordedChunks.push(event.data);
-            };
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
-                recordedChunks = [];
-                await sendVoiceMessage(audioBlob);
-            };
-        })
-        .catch(err => console.error('Failed to setup media recorder:', err));
+function setupMediaRecorder(stream) {
+    // Prefer webm/opus; fall back to whatever the browser supports
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+            ? 'audio/webm'
+            : '';
+
+    mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+            recordedChunks.push(event.data);
+        }
+    };
+    mediaRecorder.onstop = async () => {
+        const blobType = mimeType || 'audio/webm';
+        const audioBlob = new Blob(recordedChunks, { type: blobType });
+        recordedChunks = [];
+        await sendVoiceMessage(audioBlob);
+    };
 }
 
 function toggleMicRecording() {

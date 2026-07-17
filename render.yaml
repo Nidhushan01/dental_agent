@@ -4,6 +4,7 @@ services:
     runtime: docker
     plan: free           # Change to 'starter' for always-on (no sleep)
     dockerfilePath: ./Dockerfile
+    # Explicit health-check path — Render probes this to confirm the app is up
     healthCheckPath: /health
     envVars:
       # Set OPENROUTER_API_KEY in the Render dashboard — never commit secrets
@@ -19,3 +20,6 @@ services:
         value: en
       - key: DATABASE_URL
         value: sqlite:////tmp/dental.db
+      # Render injects PORT automatically; declare it so the value is visible in logs
+      - key: PORT
+        value: 10000
