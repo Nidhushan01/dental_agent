@@ -3,9 +3,6 @@
 A **voice-enabled agentic AI assistant** for dental clinics — delivered as a web chat widget.
 Patients can type or speak naturally to book appointments, check availability, reschedule, cancel, and get answers to common dental questions.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com)
-
----
 
 ## ✨ Features
 
