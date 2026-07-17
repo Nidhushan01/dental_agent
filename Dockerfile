@@ -72,9 +72,15 @@ WORKDIR /app
 # Copy application source code
 COPY --chown=appuser:appuser . .
 
-# Create directory for SQLite database and audio files
-# (can be overridden with a named volume in docker-compose)
-RUN mkdir -p /app/data && chown appuser:appuser /app/data
+# Create writable directories for SQLite DB and temp audio files.
+# /app/data  → persistent database location
+# /app/tmp   → temporary audio uploads during STT processing
+RUN mkdir -p /app/data /app/tmp \
+    && chown -R appuser:appuser /app/data /app/tmp
+
+# Point the app to the writable data directory.
+# This default is overridden by the DATABASE_URL env var on Render.
+ENV DATABASE_URL="sqlite:////app/data/dental.db"
 
 # Switch to non-root user
 USER appuser
