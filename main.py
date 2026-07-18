@@ -16,7 +16,7 @@ import uvicorn
 
 from db.db import init_db, SessionLocal
 from db.models import Appointment
-from hermes_client import call_hermes
+from mcp_hermes_client import call_hermes  # MCP-aware Hermes client
 from tools.appointments import (
     check_availability,
     book_appointment,
@@ -94,7 +94,7 @@ async def chat(request: ChatRequest):
         if not user_text:
             return JSONResponse(status_code=400, content={"error": "Message cannot be empty"})
 
-        result = call_hermes(user_text, context=request.context or [])
+        result = await call_hermes(user_text, context=request.context or [])
         if not result["success"]:
             return JSONResponse(status_code=500, content={"error": result.get("error", "LLM error")})
 
@@ -130,7 +130,7 @@ async def chat_voice(file: UploadFile = File(...), mode: str = Form("appointment
             os.remove(temp_path)
 
         request_mode = "faq" if str(mode).lower() == "faq" else "appointments"
-        result = call_hermes(transcribed_text, context=[])
+        result = await call_hermes(transcribed_text, context=[])
         if not result["success"]:
             return JSONResponse(status_code=500, content={"error": result.get("error", "LLM error")})
 

@@ -12,3 +12,5 @@ openai-whisper
 pydub
 jinja2
 httpx
+fastmcp
+nest_asyncio
