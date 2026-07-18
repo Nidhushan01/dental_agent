@@ -3,12 +3,15 @@
 A **voice-enabled agentic AI assistant** for dental clinics — delivered as a web chat widget.
 Patients can type or speak naturally to book appointments, check availability, reschedule, cancel, and get answers to common dental questions.
 
+> **Powered by the [Hermes Agent Framework](https://github.com/NousResearch/hermes-agent) by Nous Research.**
+> The agent is built on the `AIAgent` class from the `hermes-agent` package — not just the Hermes model.
+
 
 ## ✨ Features
 
 | Feature | Description |
 |---------|-------------|
-| 🤖 **Agentic AI** | Hermes LLM autonomously decides which action to take using function-calling |
+| 🤖 **Hermes Agent Framework** | Uses the real `AIAgent` class from `NousResearch/hermes-agent` — persistent memory, tool loop, multi-step reasoning |
 | 📅 **Appointments** | Book, reschedule, cancel, and check slot availability |
 | ❓ **FAQ** | Answers dental questions from a curated knowledge base |
 | 🎙️ **Voice Input** | Speak into the browser mic — Whisper transcribes it to text |
@@ -29,8 +32,19 @@ FastAPI Backend (main.py)
     │
     ├── Voice? ──► Whisper STT ──► text
     │
-    ├──► Hermes LLM (OpenRouter)
-    │         │  decides which tool to call
+    ├──► hermes_agent_wrapper.py
+    │         │
+    │         ▼
+    │    AIAgent (from run_agent import AIAgent)  ← REAL Hermes Framework
+    │    NousResearch/hermes-agent
+    │         │
+    │    ┌────┴──────────────────────┐
+    │    ▼                           ▼
+    │  Hermes Plugin: dental-tools (registered at startup)
+    │    ├── check_availability      ├── book_appointment
+    │    ├── reschedule_appointment  ├── cancel_appointment
+    │    └── get_faq
+    │         │
     │    ┌────┴──────────────────────┐
     │    ▼                           ▼
     │  Appointment Tools          FAQ Tool
@@ -41,6 +55,17 @@ FastAPI Backend (main.py)
     └──► JSON response to browser
 ```
 
+### How the Hermes Framework is Used
+
+| Hermes Feature | How It's Used Here |
+|---|---|
+| `AIAgent` class | Instantiated once at startup in `hermes_agent_wrapper.py` |
+| `agent.run_conversation()` | Called per chat message — handles the full tool-calling loop |
+| Plugin System | Dental tools registered in `~/.hermes/plugins/dental-tools/` |
+| `quiet_mode=True` | Suppresses TUI output — runs as embedded library |
+| `ephemeral_system_prompt` | Injects the dental clinic persona and instructions |
+| `skip_memory=True` | Disables persistent memory (not needed for web widget) |
+
 ---
 
 ## 🛠️ Tech Stack
@@ -48,7 +73,8 @@ FastAPI Backend (main.py)
 | Layer | Technology |
 |-------|-----------|
 | Web Framework | FastAPI + Uvicorn |
-| AI / LLM | Hermes (NousResearch) via OpenRouter API |
+| **AI Agent Framework** | **[Hermes Agent](https://github.com/NousResearch/hermes-agent) by Nous Research (`AIAgent` class)** |
+| LLM Provider | OpenRouter API (model-agnostic: GPT-4o-mini, Hermes, Claude, etc.) |
 | Speech-to-Text | OpenAI Whisper (`base` model) |
 | Text-to-Speech | Google TTS (`gTTS`) |
 | Database | SQLite + SQLAlchemy ORM |

@@ -10,10 +10,12 @@ services:
       # Set OPENROUTER_API_KEY in the Render dashboard — never commit secrets
       - key: OPENROUTER_API_KEY
         sync: false
+      # OpenRouter model ID — passed to AIAgent(model=...) in hermes_agent_wrapper.py
       - key: OPENROUTER_MODEL
-        value: gpt-4o-mini
-      - key: HERMES_MODEL
-        value: NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO
+        value: openai/gpt-4o-mini
+      # Hermes Agent Framework — OpenAI-compatible base URL (OpenRouter)
+      - key: HERMES_BASE_URL
+        value: https://openrouter.ai/api/v1
       - key: STT_MODEL
         value: base
       - key: TTS_LANGUAGE

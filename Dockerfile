@@ -67,6 +67,14 @@ ENV WHISPER_DOWNLOAD_ROOT=/opt/whisper_models
 # Non-root user for security
 RUN useradd --create-home --shell /bin/bash appuser
 
+# Ensure the Hermes plugin directory exists and is writable by appuser.
+# hermes_agent_wrapper.py writes dental-tools plugin files here at startup.
+RUN mkdir -p /home/appuser/.hermes/plugins/dental-tools \
+    && chown -R appuser:appuser /home/appuser/.hermes
+
+# Set HOME so Hermes can locate ~/.hermes correctly for the non-root user
+ENV HOME=/home/appuser
+
 WORKDIR /app
 
 # Copy application source code

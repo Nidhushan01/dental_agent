@@ -1,3 +1,16 @@
+"""[DEPRECATED] FastMCP-based Hermes client — replaced by hermes_agent_wrapper.py.
+
+This file is kept for reference only.  The project now integrates the real
+Hermes Agent Framework (NousResearch/hermes-agent):
+
+    from run_agent import AIAgent
+    agent = AIAgent(model=..., api_key=..., quiet_mode=True)
+    result = agent.run_conversation(user_message)
+
+See hermes_agent_wrapper.py for the active implementation that is used by
+main.py.
+"""
+# DEPRECATED — see hermes_agent_wrapper.py
 """MCP-aware Hermes client — replaces the legacy hermes_client.py.
 
 Architecture

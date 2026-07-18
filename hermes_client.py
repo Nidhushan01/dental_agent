@@ -1,4 +1,12 @@
-﻿"""Hermes LLM client with function-calling via OpenRouter API."""
+"""[DEPRECATED] Raw OpenRouter HTTP client — replaced by hermes_agent_wrapper.py.
+
+This file is kept for reference only.  The project now uses the real
+Hermes Agent Framework (NousResearch/hermes-agent) with the AIAgent class.
+
+See hermes_agent_wrapper.py for the active implementation.
+"""
+# DEPRECATED — see hermes_agent_wrapper.py
+"""Hermes LLM client with function-calling via OpenRouter API."""
 import httpx
 import json
 from config import settings

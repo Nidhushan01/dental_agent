@@ -12,5 +12,13 @@ openai-whisper
 pydub
 jinja2
 httpx
+
+# ── Hermes Agent Framework ────────────────────────────────────────────────────
+# The real Nous Research Hermes Agent Framework (github.com/NousResearch/hermes-agent)
+# Provides: from run_agent import AIAgent
+# Docs: https://hermes-agent.nousresearch.com/docs/
+hermes-agent @ git+https://github.com/NousResearch/hermes-agent.git
+
+# Retained for MCP server (mcp_server.py) — can be removed if MCP is unused
 fastmcp
 nest_asyncio

@@ -1,5 +1,9 @@
 """FastAPI backend for dental web agent.
 
+This module now uses the **real Hermes Agent Framework** (by Nous Research,
+github.com/NousResearch/hermes-agent).  The AIAgent class is imported and
+managed in ``hermes_agent_wrapper.py``.
+
 Endpoints:
     GET  /                 - Serve chat widget
     POST /api/chat         - Text chat pipeline
@@ -16,8 +20,10 @@ import uvicorn
 
 from db.db import init_db, SessionLocal
 from db.models import Appointment
-from mcp_hermes_client import call_hermes  # MCP-aware Hermes client
-from tools.appointments import (
+# Hermes Agent Framework integration — uses the real AIAgent class
+# (from github.com/NousResearch/hermes-agent, imported via run_agent.AIAgent)
+from hermes_agent_wrapper import call_hermes
+from dental_tools.appointments import (
     check_availability,
     book_appointment,
     reschedule_appointment,

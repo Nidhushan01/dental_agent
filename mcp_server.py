@@ -15,13 +15,13 @@ Usage (in-process):
 
 from fastmcp import FastMCP
 
-from tools.appointments import (
+from dental_tools.appointments import (
     check_availability as _check_availability,
     book_appointment as _book_appointment,
     reschedule_appointment as _reschedule_appointment,
     cancel_appointment as _cancel_appointment,
 )
-from tools.faq import get_faq as _get_faq
+from dental_tools.faq import get_faq as _get_faq
 
 # ---------------------------------------------------------------------------
 # Create the FastMCP server instance
