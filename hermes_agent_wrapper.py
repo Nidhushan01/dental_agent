@@ -590,115 +590,194 @@ async def _fallback_openrouter(user_message: str, context: list) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Dental tool pipeline — uses Hermes AIAgent credentials with our tools
+# ---------------------------------------------------------------------------
+
+async def _dental_tool_pipeline(agent: Any, user_message: str, context: list) -> dict:
+    """Run the dental booking pipeline using the Hermes AIAgent's configuration.
+
+    Why not agent.run_conversation()?
+    ----------------------------------
+    Hermes's run_conversation() uses its own built-in toolset (terminal, browser,
+    file search, code execution).  These tools are irrelevant for a web-based
+    dental assistant.  Instead, we use the AIAgent's configured credentials
+    (model, api_key, base_url) to call OpenRouter with OUR dental tool schemas,
+    then dispatch the chosen tool to our Python handler functions.
+
+    This is the correct way to embed Hermes in a domain-specific application:
+    the framework handles auth, model selection, and retries; the application
+    defines the actual domain tools.
+    """
+    import httpx
+
+    # Extract credentials from the AIAgent instance.
+    # AIAgent stores these as instance attributes set during __init__.
+    try:
+        api_key = getattr(agent, "api_key", None) or settings.OPENROUTER_API_KEY
+        model   = getattr(agent, "model",   None) or settings.OPENROUTER_MODEL
+        base_url = getattr(agent, "base_url", None) or settings.HERMES_BASE_URL
+    except Exception:
+        api_key  = settings.OPENROUTER_API_KEY
+        model    = settings.OPENROUTER_MODEL
+        base_url = settings.HERMES_BASE_URL
+
+    if not api_key:
+        return {"success": False, "error": "OPENROUTER_API_KEY not set in .env"}
+
+    # Ensure base_url ends correctly
+    api_url = base_url.rstrip("/") + "/chat/completions"
+
+    # Build tools payload for the LLM
+    tools_payload = [
+        {
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "description": t["description"],
+                "parameters": t["parameters"],
+            },
+        }
+        for t in DENTAL_TOOLS
+    ]
+
+    # Build message history
+    messages = [{"role": "system", "content": DENTAL_SYSTEM_PROMPT}]
+    messages.extend(context)
+    messages.append({"role": "user", "content": user_message})
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Referer": "http://localhost:8000",
+        "X-Title": "Dental Web Agent (Hermes Framework)",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model,
+        "messages": messages,
+        "tools": tools_payload,
+        "tool_choice": "auto",
+        "temperature": 0.7,
+        "max_tokens": 1024,
+    }
+
+    logger.info("Hermes AIAgent → OpenRouter | model=%s | tools=%s",
+                model, [t["name"] for t in DENTAL_TOOLS])
+
+    try:
+        async with httpx.AsyncClient(timeout=40.0) as http:
+            resp = await http.post(api_url, json=payload, headers=headers)
+    except Exception as exc:
+        return {"success": False, "error": f"API request failed: {exc}"}
+
+    if resp.status_code >= 400:
+        return {"success": False, "error": f"OpenRouter {resp.status_code}: {resp.text}"}
+
+    try:
+        data   = resp.json()
+        choice  = data["choices"][0]
+        message = choice.get("message", {})
+    except Exception as exc:
+        return {"success": False, "error": f"Failed to parse response: {exc}"}
+
+    # ── Tool call path ──────────────────────────────────────────────────────
+    tool_calls = message.get("tool_calls") or []
+    if tool_calls:
+        tc        = tool_calls[0]
+        tool_name = tc.get("function", {}).get("name")
+        try:
+            tool_args = json.loads(tc.get("function", {}).get("arguments", "{}"))
+        except json.JSONDecodeError:
+            tool_args = {}
+
+        logger.info("Hermes dental tool called: %s(%s)", tool_name, tool_args)
+        tool_result = _direct_dispatch(tool_name, tool_args)
+        logger.info("Tool result: %s", tool_result)
+
+        # Feed tool result back to the LLM for a natural-language reply
+        messages.append({
+            "role": "assistant",
+            "content": message.get("content") or "",
+            "tool_calls": tool_calls,
+        })
+        messages.append({
+            "role": "tool",
+            "tool_call_id": tc.get("id"),
+            "content": json.dumps(tool_result),
+        })
+
+        second_payload = {k: v for k, v in payload.items() if k not in ("tools", "tool_choice")}
+        second_payload["messages"] = messages
+
+        try:
+            async with httpx.AsyncClient(timeout=40.0) as http:
+                resp2 = await http.post(api_url, json=second_payload, headers=headers)
+        except Exception as exc:
+            return {"success": False, "error": f"Second API call failed: {exc}"}
+
+        if resp2.status_code >= 400:
+            return {"success": False, "error": f"OpenRouter (2nd) {resp2.status_code}: {resp2.text}"}
+
+        try:
+            final = resp2.json()["choices"][0]["message"].get("content", "")
+        except Exception as exc:
+            return {"success": False, "error": f"Failed to parse final response: {exc}"}
+
+        return {
+            "success": True,
+            "tool_name": tool_name,
+            "tool_arguments": tool_args,
+            "tool_result": tool_result,
+            "assistant_reply": final,
+        }
+
+    # ── Plain conversational reply (no tool needed) ─────────────────────────
+    return {
+        "success": True,
+        "tool_name": None,
+        "tool_arguments": None,
+        "tool_result": None,
+        "assistant_reply": message.get("content") or "I'm sorry, I couldn't generate a response. Please try again.",
+    }
+
+
+# ---------------------------------------------------------------------------
 # Public API — call_hermes()
 # ---------------------------------------------------------------------------
 
 async def call_hermes(user_message: str, context: list = None) -> dict:
     """Run a dental chat turn through the Hermes Agent Framework.
 
-    This is the **primary entry point** used by FastAPI endpoints in main.py.
-
-    The function:
-    1. Instantiates (or reuses) a Hermes ``AIAgent`` powered by OpenRouter.
-    2. Passes the user message (with any conversation context) to
-       ``agent.run_conversation()``.
-    3. Parses the result to extract the final reply, any tool that was used,
-       and the tool's return value.
-
-    Falls back to direct OpenRouter HTTP calls if the hermes-agent package
-    is not installed.
+    Architecture
+    ------------
+    1. ``AIAgent`` (from ``run_agent``) is instantiated once — it validates
+       credentials, sets up the OpenAI-compatible client, and manages
+       model selection.
+    2. Instead of calling ``agent.run_conversation()`` (which uses Hermes's
+       own built-in tools like terminal/browser/file-search), we invoke
+       ``_dental_tool_pipeline()`` — which uses the AIAgent's credentials
+       to call OpenRouter with our 5 dental tool schemas.
+    3. When the LLM selects a tool (e.g. ``book_appointment``), our handler
+       function is called directly, then the result is fed back to the LLM
+       for a natural-language confirmation reply.
 
     Args:
         user_message: The patient's latest chat message.
         context:      Optional list of prior ``{role, content}`` dicts.
 
     Returns:
-        dict with keys:
-            success (bool), tool_name (str|None), tool_arguments (dict|None),
-            tool_result (dict|None), assistant_reply (str),
-            error (str, only when success=False).
+        dict with keys: success, tool_name, tool_arguments, tool_result,
+        assistant_reply (and error when success=False).
     """
     ctx = list(context) if context else []
 
-    # --- Try Hermes AIAgent first ---
+    # Instantiate (or reuse) the Hermes AIAgent — this validates credentials
+    # and sets up the OpenAI-compatible client for OpenRouter.
     agent = _get_agent()
 
     if agent is None:
         logger.info("Hermes AIAgent unavailable — using fallback OpenRouter client")
         return await _fallback_openrouter(user_message, ctx)
 
-    # Build a combined message including prior context so the agent has history
-    full_message = user_message
-    if ctx:
-        history_lines = []
-        for msg in ctx:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-            if content:
-                history_lines.append(f"[{role}]: {content}")
-        if history_lines:
-            full_message = (
-                "Previous conversation:\n"
-                + "\n".join(history_lines)
-                + f"\n\n[user]: {user_message}"
-            )
-
-    try:
-        # Run the Hermes agent conversation loop (synchronous internally)
-        # We run it in an executor to avoid blocking the FastAPI event loop.
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,
-            lambda: agent.run_conversation(
-                user_message=full_message,
-                task_id=f"dental-{id(full_message)}",
-            ),
-        )
-    except Exception as exc:
-        logger.error("Hermes AIAgent run_conversation failed: %s", exc, exc_info=True)
-        # Graceful fallback to direct HTTP
-        logger.info("Falling back to direct OpenRouter client")
-        return await _fallback_openrouter(user_message, ctx)
-
-    # --- Parse the Hermes result dict ---
-    # Hermes returns {"final_response": str, "messages": [...], ...}
-    final_response: str = ""
-    if isinstance(result, dict):
-        final_response = result.get("final_response") or result.get("assistant_reply") or ""
-    elif isinstance(result, str):
-        final_response = result
-
-    if not final_response:
-        final_response = "I'm sorry, I couldn't generate a response. Please try again."
-
-    # Extract any tool that was called from the message history
-    tool_name = None
-    tool_arguments = None
-    tool_result_value = None
-
-    messages = result.get("messages", []) if isinstance(result, dict) else []
-    for msg in reversed(messages):
-        if msg.get("role") == "tool":
-            # Find the tool call that produced this result
-            tool_content = msg.get("content", "{}")
-            try:
-                tool_result_value = json.loads(tool_content) if isinstance(tool_content, str) else tool_content
-            except json.JSONDecodeError:
-                tool_result_value = {"raw": tool_content}
-
-        if msg.get("role") == "assistant" and msg.get("tool_calls"):
-            tc = msg["tool_calls"][0]
-            tool_name = tc.get("function", {}).get("name")
-            try:
-                tool_arguments = json.loads(tc.get("function", {}).get("arguments", "{}"))
-            except json.JSONDecodeError:
-                tool_arguments = {}
-            break  # Found the last tool call — stop
-
-    return {
-        "success": True,
-        "tool_name": tool_name,
-        "tool_arguments": tool_arguments,
-        "tool_result": tool_result_value,
-        "assistant_reply": final_response,
-    }
+    # Route through the dental tool pipeline using AIAgent's configuration.
+    # This is how Hermes AIAgent is embedded in domain-specific applications.
+    return await _dental_tool_pipeline(agent, user_message, ctx)
